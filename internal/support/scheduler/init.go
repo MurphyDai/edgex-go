@@ -15,24 +15,28 @@ package scheduler
 
 import (
 	"fmt"
-	"github.com/edgexfoundry/edgex-go/internal/pkg/db"
-	"github.com/edgexfoundry/edgex-go/internal/pkg/db/mongo"
-	"github.com/edgexfoundry/edgex-go/internal/support/scheduler/interfaces"
 	"sync"
 	"time"
+
+	"github.com/edgexfoundry/go-mod-core-contracts/clients"
+	"github.com/edgexfoundry/go-mod-core-contracts/clients/logging"
+	"github.com/pkg/errors"
 
 	"github.com/edgexfoundry/edgex-go/internal"
 	"github.com/edgexfoundry/edgex-go/internal/pkg/config"
 	"github.com/edgexfoundry/edgex-go/internal/pkg/consul"
-	"github.com/edgexfoundry/go-mod-core-contracts/clients"
-	"github.com/edgexfoundry/go-mod-core-contracts/clients/logging"
-	"github.com/pkg/errors"
+	"github.com/edgexfoundry/edgex-go/internal/pkg/db"
+	"github.com/edgexfoundry/edgex-go/internal/pkg/db/mongo"
+	"github.com/edgexfoundry/edgex-go/internal/support/scheduler/interfaces"
+	"github.com/edgexfoundry/edgex-go/internal/system/agent/telemetry"
 )
 
 var Configuration *ConfigurationStruct
 var LoggingClient logger.LoggingClient
 var dbClient interfaces.DBClient
 var scClient interfaces.SchedulerQueueClient
+var usageLastSample telemetry.CpuUsage // the last CPU sample we polled
+var usageAvg float64 // the running average usage
 
 var chConfig chan interface{} //A channel for use by ConsulDecoder in detecting configuration mods.
 var ticker *time.Ticker
@@ -96,6 +100,10 @@ func Init(useConsul bool) bool {
 		chConfig = make(chan interface{})
 		go listenForConfigChanges()
 	}
+
+	usageLastSample = telemetry.PollCpu()
+	go telemetry.GetCpuUsageAverage(&usageAvg, &usageLastSample)
+
 	return true
 }
 

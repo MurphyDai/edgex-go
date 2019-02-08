@@ -21,14 +21,14 @@ import (
 	"runtime"
 	"strconv"
 
-	"github.com/edgexfoundry/edgex-go/internal"
-	"github.com/edgexfoundry/edgex-go/internal/pkg/correlation"
-	"github.com/edgexfoundry/edgex-go/internal/support/scheduler/errors"
-
 	"github.com/edgexfoundry/go-mod-core-contracts/clients"
 	"github.com/edgexfoundry/go-mod-core-contracts/clients/types"
 	"github.com/edgexfoundry/go-mod-core-contracts/models"
 	"github.com/gorilla/mux"
+
+	"github.com/edgexfoundry/edgex-go/internal/pkg/correlation"
+	"github.com/edgexfoundry/edgex-go/internal/support/scheduler/errors"
+	"github.com/edgexfoundry/edgex-go/internal/system/agent/telemetry"
 )
 
 func LoadRestRoutes() *mux.Router {
@@ -81,7 +81,7 @@ func configHandler(w http.ResponseWriter, _ *http.Request) {
 }
 
 func metricsHandler(w http.ResponseWriter, _ *http.Request) {
-	var t internal.Telemetry
+	var t telemetry.SystemUsage
 
 	// The micro-service is to be considered the System Of Record (SOR) in terms of accurate information.
 	// Fetch metrics for the scheduler service.
@@ -91,14 +91,16 @@ func metricsHandler(w http.ResponseWriter, _ *http.Request) {
 	runtime.ReadMemStats(&rtm)
 
 	// Miscellaneous memory stats
-	t.Alloc = rtm.Alloc
-	t.TotalAlloc = rtm.TotalAlloc
-	t.Sys = rtm.Sys
-	t.Mallocs = rtm.Mallocs
-	t.Frees = rtm.Frees
+	t.Memory.Alloc = rtm.Alloc
+	t.Memory.TotalAlloc = rtm.TotalAlloc
+	t.Memory.Sys = rtm.Sys
+	t.Memory.Mallocs = rtm.Mallocs
+	t.Memory.Frees = rtm.Frees
 
 	// Live objects = Mallocs - Frees
-	t.LiveObjects = t.Mallocs - t.Frees
+	t.Memory.LiveObjects = t.Memory.Mallocs - t.Memory.Frees
+
+	t.CpuBusyAvg = usageAvg
 
 	encode(t, w)
 

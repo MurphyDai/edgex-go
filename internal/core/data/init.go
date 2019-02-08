@@ -18,6 +18,12 @@ import (
 	"sync"
 	"time"
 
+	"github.com/edgexfoundry/go-mod-core-contracts/clients"
+	"github.com/edgexfoundry/go-mod-core-contracts/clients/logging"
+	"github.com/edgexfoundry/go-mod-core-contracts/clients/metadata"
+	"github.com/edgexfoundry/go-mod-core-contracts/clients/types"
+	"github.com/pkg/errors"
+
 	"github.com/edgexfoundry/edgex-go/internal"
 	"github.com/edgexfoundry/edgex-go/internal/core/data/interfaces"
 	"github.com/edgexfoundry/edgex-go/internal/core/data/messaging"
@@ -26,11 +32,7 @@ import (
 	"github.com/edgexfoundry/edgex-go/internal/pkg/db"
 	"github.com/edgexfoundry/edgex-go/internal/pkg/db/mongo"
 	"github.com/edgexfoundry/edgex-go/internal/pkg/startup"
-	"github.com/edgexfoundry/go-mod-core-contracts/clients"
-	"github.com/edgexfoundry/go-mod-core-contracts/clients/logging"
-	"github.com/edgexfoundry/go-mod-core-contracts/clients/metadata"
-	"github.com/edgexfoundry/go-mod-core-contracts/clients/types"
-	"github.com/pkg/errors"
+	"github.com/edgexfoundry/edgex-go/internal/system/agent/telemetry"
 )
 
 // Global variables
@@ -42,6 +44,8 @@ var chConfig chan interface{} //A channel for use by ConsulDecoder in detecting 
 var ep messaging.EventPublisher
 var mdc metadata.DeviceClient
 var msc metadata.DeviceServiceClient
+var usageLastSample telemetry.CpuUsage // the last CPU sample we polled
+var usageAvg float64 // the running average usage
 
 func Retry(useConsul bool, useProfile string, timeout int, wait *sync.WaitGroup, ch chan error) {
 	until := time.Now().Add(time.Millisecond * time.Duration(timeout))
@@ -96,6 +100,10 @@ func Init(useConsul bool) bool {
 		chConfig = make(chan interface{})
 		go listenForConfigChanges()
 	}
+
+	usageLastSample = telemetry.PollCpu()
+	go telemetry.GetCpuUsageAverage(&usageAvg, &usageLastSample)
+
 	return true
 }
 

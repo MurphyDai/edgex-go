@@ -21,15 +21,17 @@ import (
 	"sync"
 	"time"
 
+	"github.com/edgexfoundry/go-mod-core-contracts/clients"
+	"github.com/edgexfoundry/go-mod-core-contracts/clients/logging"
+	"github.com/pkg/errors"
+
 	"github.com/edgexfoundry/edgex-go/internal"
 	"github.com/edgexfoundry/edgex-go/internal/pkg/config"
 	"github.com/edgexfoundry/edgex-go/internal/pkg/consul"
 	"github.com/edgexfoundry/edgex-go/internal/pkg/db"
 	"github.com/edgexfoundry/edgex-go/internal/pkg/db/mongo"
 	"github.com/edgexfoundry/edgex-go/internal/support/notifications/interfaces"
-	"github.com/edgexfoundry/go-mod-core-contracts/clients"
-	"github.com/edgexfoundry/go-mod-core-contracts/clients/logging"
-	"github.com/pkg/errors"
+	"github.com/edgexfoundry/edgex-go/internal/system/agent/telemetry"
 )
 
 // Global variables
@@ -37,6 +39,8 @@ var chConfig chan interface{} //A channel for use by ConsulDecoder in detecting 
 var Configuration *ConfigurationStruct
 var dbClient interfaces.DBClient
 var LoggingClient logger.LoggingClient
+var usageLastSample telemetry.CpuUsage // the last CPU sample we polled
+var usageAvg float64 // the running average usage
 
 func Retry(useConsul bool, useProfile string, timeout int, wait *sync.WaitGroup, ch chan error) {
 	until := time.Now().Add(time.Millisecond * time.Duration(timeout))
@@ -85,6 +89,10 @@ func Init(useConsul bool) bool {
 		chConfig = make(chan interface{})
 		go listenForConfigChanges()
 	}
+
+	usageLastSample = telemetry.PollCpu()
+	go telemetry.GetCpuUsageAverage(&usageAvg, &usageLastSample)
+
 	return true
 }
 
