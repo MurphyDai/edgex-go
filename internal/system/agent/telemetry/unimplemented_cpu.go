@@ -16,16 +16,26 @@
 
 package telemetry
 
-import "github.com/edgexfoundry/edgex-go/internal/system/agent/logger"
+import (
+	"github.com/edgexfoundry/edgex-go/internal/system/agent/logger"
+)
 
 func PollCpu() (cpuSnapshot CpuUsage) {
-	logs.LoggingClient.Error("could not poll CPU usage", "reason", "OS not compatible with metrics service")
+	if logs.LoggingClient == nil {
+		logs.BuildDefaultClient()
+	}
+
+	logs.LoggingClient.Debug("could not poll CPU usage", "reason", "OS not compatible with metrics service")
 
 	return cpuSnapshot
 }
 
 func AvgCpuUsage(init, final CpuUsage) (avg float64) {
-	logs.LoggingClient.Error("could not average CPU usage", "reason", "OS not compatible with metrics service")
+	if logs.LoggingClient == nil {
+		logs.BuildDefaultClient()
+	}
+
+	logs.LoggingClient.Debug("could not average CPU usage", "reason", "OS not compatible with metrics service")
 
 	return -1
 }

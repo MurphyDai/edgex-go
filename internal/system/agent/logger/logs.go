@@ -26,3 +26,7 @@ var LoggingClient logger.LoggingClient
 func BuildLoggingClient(config *interfaces.ConfigurationStruct, logTarget string) {
 	LoggingClient = logger.NewClient(internal.SystemManagementAgentServiceKey, config.EnableRemoteLogging, logTarget, config.LoggingLevel)
 }
+
+func BuildDefaultClient() {
+	LoggingClient = logger.NewClient(internal.SystemManagementAgentServiceKey, false, "", logger.InfoLog)
+}
