@@ -18,6 +18,7 @@ package telemetry
 
 import (
 	"bitbucket.org/bertimus9/systemstat"
+	"math"
 )
 
 func PollCpu() (cpuSnapshot CpuUsage) {
@@ -43,7 +44,7 @@ func AvgCpuUsage(init, final CpuUsage) (avg float64) {
 
 	avg = systemstat.GetSimpleCPUAverage(linuxInit, linuxFinal).BusyPct
 
-	if avg < .000001 {
+	if avg < .000001 || math.IsNaN(avg) {
 		return 0.0
 	}
 
